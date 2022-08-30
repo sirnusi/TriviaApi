@@ -1,5 +1,8 @@
 ## Introduction
 
+### Installations
+- pip install requirements.txt to install all the dependecies for the project.
+
 ### Getting started
 - Base URL: This app runs locally on the port 5000 `http://127.0.0.1:500`.
 - Authentication: There is currrently no authentication in my project.

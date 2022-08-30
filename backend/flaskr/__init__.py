@@ -46,10 +46,12 @@ def create_app(test_config=None):
     for all available categories.
     """
 
+    # returning a list of categories.
     @app.route('/categories')
     def get_categories():
         categories = Category.query.order_by(Category.type).all()
         
+        # checking for empty categories to give a 404 error.
         if len(categories) == 0:
             abort(404)
             
@@ -71,11 +73,13 @@ def create_app(test_config=None):
     Clicking on the page numbers should update the questions.
     """
 
+    # to get a list of the questions from the database 
     @app.route('/questions')
     def get_questions():
         question = Question.query.all()
         paginate_question = paginate_books(request, question)
         
+        # checking if there is no question to give the 404 error
         if len(paginate_question) == 0:
             abort(404)
         
@@ -93,9 +97,11 @@ def create_app(test_config=None):
     This removal will persist in the database and when you refresh the page.
     """
 
+    # to delete a specific ID in the database.
     @app.route('/questions/<int:question_id>', methods=['DELETE'])
     def delete_a_specific_question(question_id):
         try:
+            #getting the questions by ID and then deleting with the delete()
             question = Question.query.get_or_404(question_id)
             question.delete()
             
@@ -118,6 +124,7 @@ def create_app(test_config=None):
     of the questions list in the "List" tab.
     """
 
+    # creating a new question.
     @app.route('/questions', methods=['POST'])
     def create_questions():
         body = request.get_json()
@@ -129,6 +136,7 @@ def create_app(test_config=None):
         
         
         try:
+            #binding the value gotten from the form to the Question model.
             question = Question(question=new_question, 
                                 answer=new_answer, 
                                 category=new_category,
@@ -155,11 +163,14 @@ def create_app(test_config=None):
     Try using the word "title" to start.
     """
     
+    # searching the database for questions
     @app.route('/search', methods=['POST'])
     def search_questions():
         body = request.get_json()
         search_term = body.get('searchTerm', None)
         if search_term:
+            # searching by the form 'searchTerm' and checking it 
+            # for case sensitivity with the ilike()
             results_for_search = Question.query.filter(
                     Question.question.ilike(f'%{search_term}%')).all()
                 
@@ -181,9 +192,13 @@ def create_app(test_config=None):
     categories in the left column will cause only questions of that
     category to be shown.
     """
+    
+    # getting questions based on a particular category.
     @app.route('/categories/<int:category_id>/questions', methods=['GET'])
     def get_questions_by_category(category_id):
         
+        # filtering it by the category field in the Question model to 
+        # the category_id(Category model)
         questions = Question.query.filter_by(category=str(category_id)).all()    
         
         if not questions:
@@ -209,6 +224,7 @@ def create_app(test_config=None):
     and shown whether they were correct or not.
     """
     
+    # trying to play quiz for a particular category.
     @app.route('/quizzes', methods=['POST'])
     def get_quiz():
         try:
