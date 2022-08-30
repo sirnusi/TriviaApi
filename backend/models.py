@@ -12,6 +12,11 @@ db = SQLAlchemy()
 setup_db(app)
     binds a flask application and a SQLAlchemy service
 """
+database_name = "trivia"
+
+database_path = f"postgresql://{'postgres'}:{'sirnusi'}@{'localhost:5432'}/{database_name}"
+
+
 def setup_db(app, database_path=database_path):
     app.config["SQLALCHEMY_DATABASE_URI"] = database_path
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
