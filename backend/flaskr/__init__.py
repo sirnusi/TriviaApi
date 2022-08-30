@@ -51,13 +51,19 @@ def create_app(test_config=None):
     def get_categories():
         categories = Category.query.order_by(Category.type).all()
         
+        category_dict = {}
+        
+        for category in categories:
+            category_dict[category.id] = category.type
+        
         # checking for empty categories to give a 404 error.
         if len(categories) == 0:
             abort(404)
             
         return jsonify({
             "success": True,
-            "category": {category.id: category.type for category in categories}
+            "categories": category_dict,
+            "total_categories": len(Category.query.all())
         })
     
     """
@@ -78,6 +84,7 @@ def create_app(test_config=None):
     def get_questions():
         question = Question.query.all()
         paginate_question = paginate_books(request, question)
+        categories = Category.query.all()
         
         # checking if there is no question to give the 404 error
         if len(paginate_question) == 0:
@@ -86,7 +93,8 @@ def create_app(test_config=None):
         return jsonify({
             "success": True,
             "questions": paginate_question,
-            "total_questions": len(question)
+            "total_questions": len(question),
+            "categories": {category.id: category.type for category in categories}
         })
     
     """
@@ -105,9 +113,14 @@ def create_app(test_config=None):
             question = Question.query.get_or_404(question_id)
             question.delete()
             
+            selection = Question.query.order_by(Question.id).all()
+            paginate_question = paginate_books(request, selection)
+            
             return jsonify({
                 "success": True,
-                "deleted": question.id
+                "deleted": question.id,
+                'questions': paginate_questions,
+                'total_questions': len(Question.query.all())
             })
             
         except:
@@ -144,10 +157,14 @@ def create_app(test_config=None):
                 
             question.insert()
             
+            selection = Question.query.order_by(Question.id).all()
+            current_questions = paginate_books(request, selection)
+            
             return jsonify({
                 "success": True,
                 "created": question.id,
-                
+                'questions': current_questions,
+                'total_questions': len(Question.query.all())
             })
         except:
             abort(400)
@@ -164,26 +181,28 @@ def create_app(test_config=None):
     """
     
     # searching the database for questions
-    @app.route('/search', methods=['POST'])
+    @app.route('/questions', methods=['POST'])
     def search_questions():
         body = request.get_json()
         search_term = body.get('searchTerm', None)
-        if search_term:
-            # searching by the form 'searchTerm' and checking it 
-            # for case sensitivity with the ilike()
-            results_for_search = Question.query.filter(
-                    Question.question.ilike(f'%{search_term}%')).all()
-                
-            if not results_for_search:
-                abort (404)    
+        try:
+            if search_term:
+                # searching by the form 'searchTerm' and checking it 
+                # for case sensitivity with the ilike()
+                results_for_search = Question.query.filter(
+                        Question.question.ilike(f'%{search_term}%')).all()
                     
-            paginate_question = paginate_books(request, results_for_search)
-            return jsonify({
-                'success': True,
-                'questions': paginate_question,
-                'total_questions': len(results_for_search)
-            })             
-             
+                if not results_for_search:
+                    abort (404)    
+                        
+                paginate_question = paginate_books(request, results_for_search)
+                return jsonify({
+                    'success': True,
+                    'questions': paginate_question,
+                    'total_questions': len(results_for_search)
+                })             
+        except BaseException:
+            abort(404)        
     """
     @TODO:
     Create a GET endpoint to get questions based on category.
@@ -207,8 +226,7 @@ def create_app(test_config=None):
         return jsonify({
             'success': True,
             'questions': [question.format() for question in questions],
-            'total_questions': len(questions),
-            'current_category': category_id
+            'total_questions': len(questions)
         })
         
     
@@ -226,7 +244,7 @@ def create_app(test_config=None):
     
     # trying to play quiz for a particular category.
     @app.route('/quizzes', methods=['POST'])
-    def get_quiz():
+    def play_quiz():
         try:
             data = request.get_json()
             quiz_category = data.get('quiz_category', None)
