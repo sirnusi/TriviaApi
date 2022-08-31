@@ -8,7 +8,7 @@ from models import setup_db, Question, Category
 
 QUESTIONS_PER_PAGE = 10
 
-def paginate_books(request, selection):
+def pagination(request, selection):
     page = request.args.get('page', 1, type=int)
     start = (page - 1) * QUESTIONS_PER_PAGE
     end = start + QUESTIONS_PER_PAGE
@@ -82,8 +82,8 @@ def create_app(test_config=None):
     # to get a list of the questions from the database 
     @app.route('/questions')
     def get_questions():
-        question = Question.query.all()
-        paginate_question = paginate_books(request, question)
+        question = Question.query.order_by(Question.id).all()
+        paginate_question = pagination(request, question)
         categories = Category.query.all()
         
         # checking if there is no question to give the 404 error
@@ -94,7 +94,7 @@ def create_app(test_config=None):
             "success": True,
             "questions": paginate_question,
             "total_questions": len(question),
-            "categories": {category.id: category.type for category in categories}
+            "categories": {category.id: category.type for category in categories},
         })
     
     """
@@ -108,13 +108,12 @@ def create_app(test_config=None):
     # to delete a specific ID in the database.
     @app.route('/questions/<int:question_id>', methods=['DELETE'])
     def delete_a_specific_question(question_id):
-        try:
             #getting the questions by ID and then deleting with the delete()
             question = Question.query.get_or_404(question_id)
             question.delete()
             
             selection = Question.query.order_by(Question.id).all()
-            paginate_question = paginate_books(request, selection)
+            paginate_question = pagination(request, selection)
             
             return jsonify({
                 "success": True,
@@ -122,9 +121,7 @@ def create_app(test_config=None):
                 'questions': paginate_questions,
                 'total_questions': len(Question.query.all())
             })
-            
-        except:
-            abort(404)
+
     
     """
     @TODO:
@@ -158,7 +155,7 @@ def create_app(test_config=None):
             question.insert()
             
             selection = Question.query.order_by(Question.id).all()
-            current_questions = paginate_books(request, selection)
+            current_questions = pagination(request, selection)
             
             return jsonify({
                 "success": True,
@@ -190,19 +187,18 @@ def create_app(test_config=None):
                 # searching by the form 'searchTerm' and checking it 
                 # for case sensitivity with the ilike()
                 results_for_search = Question.query.filter(
-                        Question.question.ilike(f'%{search_term}%')).all()
-                    
-                if not results_for_search:
-                    abort (404)    
-                        
-                paginate_question = paginate_books(request, results_for_search)
+                Question.question.ilike(f'%{search_term}%')).all()   
+            
+                
+                paginate_question = pagination(request, results_for_search)
+                
                 return jsonify({
                     'success': True,
                     'questions': paginate_question,
                     'total_questions': len(results_for_search)
-                })             
-        except BaseException:
-            abort(404)        
+                })                  
+        except:
+            abort (400)
     """
     @TODO:
     Create a GET endpoint to get questions based on category.
