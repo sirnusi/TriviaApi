@@ -45,7 +45,7 @@ def create_app(test_config=None):
     Create an endpoint to handle GET requests
     for all available categories.
     """
-
+    
     # returning a list of categories.
     @app.route('/categories')
     def get_categories():
@@ -118,7 +118,7 @@ def create_app(test_config=None):
             return jsonify({
                 "success": True,
                 "deleted": question.id,
-                'questions': paginate_questions,
+                'questions': paginate_question,
                 'total_questions': len(Question.query.all())
             })
 
@@ -134,71 +134,70 @@ def create_app(test_config=None):
     of the questions list in the "List" tab.
     """
 
+    
     # creating a new question.
     @app.route('/questions', methods=['POST'])
-    def create_questions():
+    def create_or_search_questions():
         body = request.get_json()
         
+        search_term = body.get('searchTerm', None)
+
+        if search_term:
+            questions = Question.query.filter(Question.question.contains(search_term)).all()
+
+      # If there are no questions return 404
+            if not questions:
+                abort(404)
+      
+            questions_found = [question.format() for question in questions]
+            selections = Question.query.order_by(Question.id).all() 
+      
+      # Also query for categories and return as list of dict
+            categories = Category.query.all()
+            categories_all = [category.format() for category in categories]
+
+            return jsonify({
+                'success': True,
+                'questions': questions_found,
+                'total_questions': len(selections),
+                'current_category' : categories_all
+            })
+    
+    # Get field informations from request body
         new_question = body.get('question', None)
         new_answer = body.get('answer', None)
         new_category = body.get('category', None)
         new_difficulty = body.get('difficulty', None)
-        
-        
-        try:
-            #binding the value gotten from the form to the Question model.
-            question = Question(question=new_question, 
-                                answer=new_answer, 
-                                category=new_category,
-                                difficulty=new_difficulty)
-                
-            question.insert()
-            
-            selection = Question.query.order_by(Question.id).all()
-            current_questions = pagination(request, selection)
-            
-            return jsonify({
-                "success": True,
-                "created": question.id,
-                'questions': current_questions,
-                'total_questions': len(Question.query.all())
-            })
-        except:
-            abort(400)
-    
-    """
-    @TODO:
-    Create a POST endpoint to get questions based on a search term.
-    It should return any questions for whom the search term
-    is a substring of the question.
 
-    TEST: Search by any phrase. The questions list will update to include
-    only question that include that string within their question.
-    Try using the word "title" to start.
-    """
-    
-    # searching the database for questions
-    @app.route('/questions', methods=['POST'])
-    def search_questions():
-        body = request.get_json()
-        search_term = body.get('searchTerm', None)
+   
         try:
-            if search_term:
-                # searching by the form 'searchTerm' and checking it 
-                # for case sensitivity with the ilike()
-                results_for_search = Question.query.filter(
-                Question.question.ilike(f'%{search_term}%')).all()   
-            
-                
-                paginate_question = pagination(request, results_for_search)
-                
-                return jsonify({
-                    'success': True,
-                    'questions': paginate_question,
-                    'total_questions': len(results_for_search)
-                })                  
+            question = Question(
+                question = new_question, 
+                answer = new_answer, 
+                category= new_category,
+                difficulty = new_difficulty
+            )
+            question.insert()
+
+      # After succesfully insertion, get all paginated questions 
+            selections = Question.query.order_by(Question.id).all()
+            questions_paginated = pagination(request, selections)
+
+      # Return succesfull response
+            return jsonify({
+                'success': True,
+                'created': question.id,
+                'questions': questions_paginated,
+                'total_questions': len(selections)
+            })
+
         except:
-            abort (400)
+            abort(422)
+    
+    """
+
+    """
+  
     """
     @TODO:
     Create a GET endpoint to get questions based on category.
@@ -270,8 +269,8 @@ def create_app(test_config=None):
 
         except BaseException:
             abort(400)
-
-    """
+    """ 
+    
     @TODO:
     Create error handlers for all expected errors
     including 404 and 422.
